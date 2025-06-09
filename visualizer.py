@@ -5,7 +5,12 @@ import os
 import numpy as np
 
 def setup_korean_font():
-    """한글 폰트 설정"""
+    """한글 폰트 설정
+    Returns:
+        FontProperties: 설정된 폰트 속성
+    Raises:
+        RuntimeError: 폰트 파일이 없는 경우
+    """
     font_path = os.path.join(os.path.dirname(__file__), 'NanumSquareNeo-cBd.ttf')
     if os.path.exists(font_path):
         font_prop = fm.FontProperties(fname=font_path)
@@ -17,6 +22,13 @@ def setup_korean_font():
         raise RuntimeError("NanumSquareNeo-cBd.ttf 폰트 파일이 visualizer.py와 같은 폴더에 있어야 합니다.")
 
 def calc_daily_moves(timetable, graph):
+    """일별 이동 거리 계산
+    Args:
+        timetable (dict): 시간표 데이터
+        graph (nx.Graph): 그래프 객체
+    Returns:
+        list: 일별 이동 거리 리스트
+    """
     days = ['월요일', '화요일', '수요일', '목요일', '금요일']
     daily_moves = []
     for day in days:
@@ -36,6 +48,13 @@ def calc_daily_moves(timetable, graph):
     return daily_moves
 
 def plot_timetable(timetable, class_name="", graph=None, save_path=None):
+    """시간표 시각화
+    Args:
+        timetable (dict): 시간표 데이터
+        class_name (str): 반 이름
+        graph (nx.Graph, optional): 그래프 객체
+        save_path (str, optional): 저장할 파일 경로
+    """
     fontprop = setup_korean_font()
     days = ['월요일', '화요일', '수요일', '목요일', '금요일']
     periods_per_day = {
@@ -102,6 +121,11 @@ def plot_timetable(timetable, class_name="", graph=None, save_path=None):
     plt.show()
 
 def plot_route(graph, path):
+    """경로 시각화
+    Args:
+        graph (nx.Graph): 그래프 객체
+        path (list): 경로 노드 리스트
+    """
     import matplotlib.pyplot as plt
     import matplotlib.font_manager as fm
     import os

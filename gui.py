@@ -11,20 +11,29 @@ from dataclasses import dataclass
 import random
 from datetime import datetime
 import json
+import pygame
+from PIL import Image
 
 class AppGUI(ctk.CTk):
+    """메인 GUI 애플리케이션 클래스"""
     def __init__(self, scheduler, route_opt, loader):
+        """GUI 초기화
+        Args:
+            scheduler: 스케줄러 객체
+            route_opt: 경로 최적화 객체
+            loader: 데이터 로더 객체
+        """
         super().__init__()
         
-        # Configure window
+        # 윈도우 설정
         self.title('Minimal Move Timetable')
         self.geometry("800x600")
         
-        # Configure grid
+        # 그리드 설정
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
         
-        # Set theme
+        # 테마 설정
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
@@ -37,35 +46,44 @@ class AppGUI(ctk.CTk):
         self.class_dropdown = None
         self.timetable_text = None
         
-        # Create tabview
+        # 탭뷰 생성
         self.tabview = ctk.CTkTabview(self)
         self.tabview.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
         
-        # Create tabs
+        # 탭 생성
         self.tab_main = self.tabview.add("메인")
         self.tab_data = self.tabview.add("데이터 관리")
-        self.tab_route = self.tabview.add("장애인 경로 안내")
+        self.tab_route = self.tabview.add("경로 최적화")
         
         self.create_main_tab()
         self.create_route_tab()
         
-        # Create data manager GUI
+        # 데이터 관리 GUI 생성
         self.data_manager = DataManagerGUI(self.tab_data, loader)
+        
+        # 왼쪽 상단에 로고 이미지 삽입
+        logo_img = Image.open("data/icon.png").resize((32, 32))
+        self.logo_photo = ctk.CTkImage(light_image=logo_img, dark_image=logo_img, size=(32, 32))
+        self.logo_label = ctk.CTkLabel(self, image=self.logo_photo, text="")
+        self.logo_label.place(x=10, y=10)
 
     def create_main_tab(self):
+        """메인 탭 생성"""
         # 스크롤 가능한 프레임 생성
         self.scroll_frame = ctk.CTkScrollableFrame(self.tab_main, width=760, height=550)
         self.scroll_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.tab_main.grid_rowconfigure(0, weight=1)
         self.tab_main.grid_columnconfigure(0, weight=1)
-        # Title label
+        
+        # 제목 레이블
         self.title_label = ctk.CTkLabel(
             self.scroll_frame,
             text="시간표 및 경로 최적화",
             font=ctk.CTkFont(size=20, weight="bold")
         )
         self.title_label.pack(pady=(20, 10))
-        # Buttons
+        
+        # 버튼들
         self.timetable_btn = ctk.CTkButton(
             self.scroll_frame,
             text="시간표 생성 및 시각화",
@@ -73,14 +91,20 @@ class AppGUI(ctk.CTk):
             height=40
         )
         self.timetable_btn.pack(pady=10, fill="x")
+        
+        # 반 선택 드롭다운
         self.class_dropdown = ctk.CTkComboBox(
             self.scroll_frame,
             values=[],
             command=self.on_class_select
         )
         self.class_dropdown.pack(pady=10, fill="x")
+        
+        # 시간표 텍스트 박스
         self.timetable_text = ctk.CTkTextbox(self.scroll_frame, width=600, height=300)
         self.timetable_text.pack(pady=10, fill="both", expand=True)
+        
+        # 시각화 버튼
         self.visualize_btn = ctk.CTkButton(
             self.scroll_frame,
             text="선택 반 시간표 이미지로 시각화",
@@ -90,13 +114,14 @@ class AppGUI(ctk.CTk):
         self.visualize_btn.pack(pady=10, fill="x")
 
     def create_route_tab(self):
+        """경로 최적화 탭 생성"""
         # 스크롤 가능한 프레임 생성
         self.route_scroll_frame = ctk.CTkScrollableFrame(self.tab_route, width=760, height=550)
         self.route_scroll_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.tab_route.grid_rowconfigure(0, weight=1)
         self.tab_route.grid_columnconfigure(0, weight=1)
 
-        # Title label
+        # 제목 레이블
         self.route_title_label = ctk.CTkLabel(
             self.route_scroll_frame,
             text="장애인 이동 경로 안내",
@@ -175,17 +200,29 @@ class AppGUI(ctk.CTk):
         self.route_text.pack(pady=10, fill="both", expand=True)
 
     def show_timetable(self):
+        """시간표 생성 및 표시"""
         self.timetables = self.scheduler.generate()
         class_list = sorted(self.timetables.keys(), key=lambda x: int(x) if x.isdigit() else x)
         self.class_dropdown.configure(values=class_list)
         if class_list:
             self.class_dropdown.set(class_list[0])
             self.display_timetable(class_list[0])
+        # 시간표 완성 시 알람
+        try:
+            pygame.mixer.music.load("data/alarm.mp3")
+            pygame.mixer.music.play()
+        except Exception as e:
+            print(f"Alarm sound error: {e}")
 
     def on_class_select(self, selected_class):
+        """반 선택 시 호출되는 콜백 함수"""
         self.display_timetable(selected_class)
 
     def display_timetable(self, class_num):
+        """시간표 표시
+        Args:
+            class_num (str): 반 번호
+        """
         timetable = self.timetables.get(class_num)
         if not timetable:
             self.timetable_text.delete("1.0", "end")
@@ -205,6 +242,7 @@ class AppGUI(ctk.CTk):
         self.timetable_text.insert("end", text)
 
     def visualize_selected_timetable(self):
+        """선택된 시간표 시각화"""
         class_num = self.class_dropdown.get()
         if not class_num or not self.timetables or class_num not in self.timetables:
             print("No timetable or class selected")
@@ -226,11 +264,13 @@ class AppGUI(ctk.CTk):
             print(f"시각화 중 오류: {e}")
 
     def on_route_class_select(self, selected_class):
+        """경로 최적화 탭에서 반 선택 시 호출되는 콜백 함수"""
         self.selected_class = selected_class
         if self.timetables:
             self.display_timetable(selected_class)
 
     def generate_route(self):
+        """경로 생성"""
         class_num = self.route_class_dropdown.get()
         day = self.day_dropdown.get()
         period = int(self.period_dropdown.get())
@@ -260,6 +300,12 @@ class AppGUI(ctk.CTk):
             
             self.route_text.delete("1.0", "end")
             self.route_text.insert("end", route_text)
+            # 경로 생성 성공 시 알람
+            try:
+                pygame.mixer.music.load("data/alarm.mp3")
+                pygame.mixer.music.play()
+            except Exception as e:
+                print(f"Alarm sound error: {e}")
         except Exception as e:
             self.route_text.delete("1.0", "end")
             self.route_text.insert("end", f"경로 생성 중 오류가 발생했습니다: {str(e)}")

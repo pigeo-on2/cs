@@ -1,17 +1,24 @@
+# 필요한 라이브러리 임포트
 import customtkinter as ctk
 import pandas as pd
 from tkinter import messagebox
 
 class DataManagerGUI:
+    """데이터 관리 GUI 클래스"""
     def __init__(self, parent, loader):
+        """데이터 관리 GUI 초기화
+        Args:
+            parent: 부모 윈도우
+            loader: 데이터 로더 객체
+        """
         self.parent = parent
         self.loader = loader
         
-        # Create tabview
+        # 탭뷰 생성
         self.tabview = ctk.CTkTabview(parent)
         self.tabview.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
         
-        # Create tabs
+        # 탭 생성
         self.tab_locations = self.tabview.add("위치 관리")
         self.tab_subjects = self.tabview.add("과목 관리")
         self.tab_teachers = self.tabview.add("교사 관리")
@@ -21,20 +28,21 @@ class DataManagerGUI:
         self.create_school_data_tab()
 
     def create_locations_tab(self):
+        """위치 관리 탭 생성"""
         frame = ctk.CTkFrame(self.tab_locations)
         frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
         frame.grid_columnconfigure(0, weight=1)
         
-        # Title
+        # 제목
         title = ctk.CTkLabel(frame, text="위치 관리", font=ctk.CTkFont(size=16, weight="bold"))
         title.grid(row=0, column=0, padx=10, pady=(10, 20))
         
-        # Input frame
+        # 입력 프레임
         input_frame = ctk.CTkFrame(frame)
         input_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         input_frame.grid_columnconfigure((0,1,2), weight=1)
         
-        # Input fields
+        # 입력 필드
         self.loc_building = ctk.CTkEntry(input_frame, placeholder_text="건물명")
         self.loc_building.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
@@ -50,11 +58,11 @@ class DataManagerGUI:
         self.loc_y = ctk.CTkEntry(input_frame, placeholder_text="Y 좌표")
         self.loc_y.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
         
-        # Add button
+        # 추가 버튼
         add_btn = ctk.CTkButton(input_frame, text="위치 추가", command=self.add_location)
         add_btn.grid(row=1, column=2, padx=5, pady=5, sticky="ew")
         
-        # Location list
+        # 위치 목록
         list_frame = ctk.CTkFrame(frame)
         list_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
@@ -65,20 +73,21 @@ class DataManagerGUI:
         self.update_location_list()
 
     def create_subjects_tab(self):
+        """과목 관리 탭 생성"""
         frame = ctk.CTkFrame(self.tab_subjects)
         frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
         frame.grid_columnconfigure(0, weight=1)
         
-        # Title
+        # 제목
         title = ctk.CTkLabel(frame, text="과목 관리", font=ctk.CTkFont(size=16, weight="bold"))
         title.grid(row=0, column=0, padx=10, pady=(10, 20))
         
-        # Input frame
+        # 입력 프레임
         input_frame = ctk.CTkFrame(frame)
         input_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         input_frame.grid_columnconfigure((0,1,2), weight=1)
         
-        # Input fields
+        # 입력 필드
         self.subj_name = ctk.CTkEntry(input_frame, placeholder_text="과목명")
         self.subj_name.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
@@ -88,11 +97,11 @@ class DataManagerGUI:
         self.subj_classes = ctk.CTkEntry(input_frame, placeholder_text="담당 반 (쉼표로 구분)")
         self.subj_classes.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
         
-        # Add button
+        # 추가 버튼
         add_btn = ctk.CTkButton(input_frame, text="과목 추가", command=self.add_subject)
         add_btn.grid(row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
         
-        # Subject list
+        # 과목 목록
         list_frame = ctk.CTkFrame(frame)
         list_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
@@ -103,19 +112,21 @@ class DataManagerGUI:
         self.update_subject_list()
 
     def create_school_data_tab(self):
+        """학교 데이터 관리 탭 생성"""
         frame = ctk.CTkFrame(self.tab_teachers)
         frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
         frame.grid_columnconfigure(0, weight=1)
         
-        # Title
+        # 제목
         title = ctk.CTkLabel(frame, text="교사/과목/반/교실 관리", font=ctk.CTkFont(size=16, weight="bold"))
         title.grid(row=0, column=0, padx=10, pady=(10, 20))
         
-        # Input frame
+        # 입력 프레임
         input_frame = ctk.CTkFrame(frame)
         input_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
         input_frame.grid_columnconfigure((0,1,2,3), weight=1)
         
+        # 입력 필드
         self.sd_teacher = ctk.CTkEntry(input_frame, placeholder_text="선생님")
         self.sd_teacher.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         self.sd_subject = ctk.CTkEntry(input_frame, placeholder_text="과목")
@@ -125,10 +136,11 @@ class DataManagerGUI:
         self.sd_classes = ctk.CTkEntry(input_frame, placeholder_text="담당 반 (쉼표로 구분)")
         self.sd_classes.grid(row=0, column=3, padx=5, pady=5, sticky="ew")
         
+        # 추가 버튼
         add_btn = ctk.CTkButton(input_frame, text="추가", command=self.add_school_data)
         add_btn.grid(row=1, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
         
-        # List
+        # 목록
         list_frame = ctk.CTkFrame(frame)
         list_frame.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
         list_frame.grid_columnconfigure(0, weight=1)
@@ -138,6 +150,7 @@ class DataManagerGUI:
         self.update_school_data_list()
 
     def add_location(self):
+        """위치 추가"""
         try:
             building = self.loc_building.get()
             floor = int(self.loc_floor.get())
@@ -145,10 +158,10 @@ class DataManagerGUI:
             x = float(self.loc_x.get())
             y = float(self.loc_y.get())
             
-            # Load existing data
+            # 기존 데이터 로드
             df = pd.read_csv('data/locations.csv')
             
-            # Add new location
+            # 새 위치 추가
             new_row = pd.DataFrame({
                 'building': [building],
                 'floor': [floor],
@@ -158,14 +171,14 @@ class DataManagerGUI:
             })
             df = pd.concat([df, new_row], ignore_index=True)
             
-            # Save back to CSV
+            # CSV 파일에 저장
             df.to_csv('data/locations.csv', index=False)
             
-            # Update UI
+            # UI 업데이트
             self.update_location_list()
             self.clear_location_inputs()
             
-            # Notify parent to reload data
+            # 부모에게 데이터 재로드 요청
             if hasattr(self.parent, 'route_opt'):
                 self.parent.route_opt.locations = self.loader.load_csv('locations').to_dict('records')
                 self.parent.route_opt.graph = self.parent.route_opt.build_graph(self.parent.route_opt.locations)
@@ -175,6 +188,7 @@ class DataManagerGUI:
             messagebox.showerror("오류", f"위치 추가 중 오류가 발생했습니다: {str(e)}")
 
     def add_subject(self):
+        """과목 추가"""
         try:
             subject = self.subj_name.get()
             teacher = self.subj_teacher.get()
@@ -190,6 +204,7 @@ class DataManagerGUI:
             messagebox.showerror("오류", f"과목 추가 중 오류가 발생했습니다: {str(e)}")
 
     def add_school_data(self):
+        """학교 데이터 추가"""
         try:
             teacher = self.sd_teacher.get()
             subject = self.sd_subject.get()
@@ -206,6 +221,7 @@ class DataManagerGUI:
             messagebox.showerror("오류", f"데이터 추가 중 오류가 발생했습니다: {str(e)}")
 
     def update_location_list(self):
+        """위치 목록 업데이트"""
         try:
             df = pd.read_csv('data/locations.csv')
             self.loc_list.delete("1.0", "end")
@@ -216,6 +232,7 @@ class DataManagerGUI:
             self.loc_list.insert("end", f"위치 목록을 불러오는 중 오류가 발생했습니다: {str(e)}")
 
     def update_subject_list(self):
+        """과목 목록 업데이트"""
         try:
             df = pd.read_csv('data/school_data.csv')
             self.subj_list.delete("1.0", "end")
@@ -226,6 +243,7 @@ class DataManagerGUI:
             self.subj_list.insert("end", f"과목 목록을 불러오는 중 오류가 발생했습니다: {str(e)}")
 
     def update_school_data_list(self):
+        """학교 데이터 목록 업데이트"""
         try:
             df = pd.read_csv('data/school_data.csv')
             self.school_data_list.delete("1.0", "end")
@@ -236,6 +254,7 @@ class DataManagerGUI:
             self.school_data_list.insert("end", f"목록을 불러오는 중 오류가 발생했습니다: {str(e)}")
 
     def clear_location_inputs(self):
+        """위치 입력 필드 초기화"""
         self.loc_building.delete(0, "end")
         self.loc_floor.delete(0, "end")
         self.loc_room.delete(0, "end")
@@ -243,11 +262,13 @@ class DataManagerGUI:
         self.loc_y.delete(0, "end")
 
     def clear_subject_inputs(self):
+        """과목 입력 필드 초기화"""
         self.subj_name.delete(0, "end")
         self.subj_teacher.delete(0, "end")
         self.subj_classes.delete(0, "end")
 
     def clear_school_data_inputs(self):
+        """학교 데이터 입력 필드 초기화"""
         self.sd_teacher.delete(0, "end")
         self.sd_subject.delete(0, "end")
         self.sd_room.delete(0, "end")
