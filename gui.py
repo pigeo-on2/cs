@@ -11,7 +11,6 @@ from dataclasses import dataclass
 import random
 from datetime import datetime
 import json
-from route_popup import RoutePopup
 
 class AppGUI(ctk.CTk):
     def __init__(self, scheduler, route_opt, loader):
@@ -87,13 +86,6 @@ class AppGUI(ctk.CTk):
             height=40
         )
         self.visualize_btn.pack(pady=10, fill="x")
-        self.snack_route_btn = ctk.CTkButton(
-            self.scroll_frame,
-            text="경유(매점/기숙사) 경로 보기",
-            command=self.show_route_popup,
-            height=40
-        )
-        self.snack_route_btn.pack(pady=10, fill="x")
 
     def show_timetable(self):
         self.timetables = self.scheduler.generate()
@@ -145,13 +137,4 @@ class AppGUI(ctk.CTk):
             print("시각화 완료")
         except Exception as e:
             print(f"시각화 중 오류: {e}")
-
-    def show_route_popup(self):
-        """경유 경로 팝업 표시"""
-        if not hasattr(self, 'locations_df'):
-            self.show_error("위치 데이터를 먼저 로드해주세요.")
-            return
-        
-        popup = RoutePopup(self, self.locations_df)
-        popup.grab_set()  # 모달 창으로 설정
             
