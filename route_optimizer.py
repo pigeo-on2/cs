@@ -38,10 +38,54 @@ class RouteOptimizer:
                     G.add_edge(row1['room_number'], row2['room_number'], 
                              weight=dist)
         
+        # 엘리베이터가 있는 노드들 간의 연결 추가
+        elevator_nodes = [node for node, data in G.nodes(data=True) if data.get('elevator', 0) == 1]
+        for i, node1 in enumerate(elevator_nodes):
+            for node2 in elevator_nodes[i+1:]:
+                if G.nodes[node1]['building'] == G.nodes[node2]['building']:
+                    # 층 차이에 따른 가중치 계산 (엘리베이터 사용)
+                    floor_diff = abs(G.nodes[node1]['floor'] - G.nodes[node2]['floor'])
+                    weight = floor_diff * 10  # 엘리베이터 사용 시 층당 10의 가중치
+                    G.add_edge(node1, node2, weight=weight)
+        
         return G
     
     def shortest_path(self, start: str, end: str) -> List[str]:
-        return nx.shortest_path(self.graph, start, end, weight='weight')
+        try:
+            # 시작점과 끝점이 그래프에 존재하는지 확인
+            if start not in self.graph or end not in self.graph:
+                raise ValueError(f"시작점({start}) 또는 끝점({end})이 그래프에 존재하지 않습니다.")
+            
+            # 최단 경로 계산
+            path = nx.shortest_path(self.graph, start, end, weight='weight')
+            
+            # 경로 상세 정보 생성
+            detailed_path = []
+            for i in range(len(path)-1):
+                current = path[i]
+                next_node = path[i+1]
+                
+                current_data = self.graph.nodes[current]
+                next_data = self.graph.nodes[next_node]
+                
+                # 건물이 다른 경우
+                if current_data['building'] != next_data['building']:
+                    detailed_path.append(f"{current} → {next_node} (건물 이동)")
+                # 층이 다른 경우
+                elif current_data['floor'] != next_data['floor']:
+                    if current_data.get('elevator', 0) == 1 and next_data.get('elevator', 0) == 1:
+                        detailed_path.append(f"{current} → {next_node} (엘리베이터 사용)")
+                    else:
+                        detailed_path.append(f"{current} → {next_node} (계단 사용)")
+                # 같은 건물, 같은 층
+                else:
+                    detailed_path.append(f"{current} → {next_node}")
+            
+            return detailed_path
+        except nx.NetworkXNoPath:
+            raise ValueError(f"{start}에서 {end}까지의 경로를 찾을 수 없습니다.")
+        except Exception as e:
+            raise ValueError(f"경로 계산 중 오류가 발생했습니다: {str(e)}")
 
     def calculate_distance(self, loc1: Location, loc2: Location) -> float:
         """Calculate the Euclidean distance between two locations"""
