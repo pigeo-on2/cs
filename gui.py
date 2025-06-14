@@ -13,6 +13,17 @@ from datetime import datetime
 import json
 import pygame
 from PIL import Image
+import sys
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                           QHBoxLayout, QPushButton, QLabel, QComboBox,
+                           QSpinBox, QDoubleSpinBox, QCheckBox, QGroupBox,
+                           QMessageBox, QTabWidget, QTextEdit, QFileDialog)
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QFont
+import logging
+
+# 로거 설정
+logger = logging.getLogger(__name__)
 
 class AppGUI(ctk.CTk):
     """메인 GUI 애플리케이션 클래스"""
@@ -309,4 +320,382 @@ class AppGUI(ctk.CTk):
         except Exception as e:
             self.route_text.delete("1.0", "end")
             self.route_text.insert("end", f"경로 생성 중 오류가 발생했습니다: {str(e)}")
+            
+class MainWindow(QMainWindow):
+    """
+    메인 윈도우 클래스
+    
+    이 클래스는 애플리케이션의 메인 윈도우를 구현하며,
+    사용자 인터페이스의 주요 구성 요소를 포함합니다.
+    """
+    
+    def __init__(self):
+        """MainWindow 초기화"""
+        super().__init__()
+        self.init_ui()
+        self.setup_connections()
+        self.setup_timer()
+        
+    def init_ui(self):
+        """사용자 인터페이스 초기화"""
+        # 메인 윈도우 설정
+        self.setWindowTitle('배송 최적화 시스템')
+        self.setGeometry(100, 100, 1200, 800)
+        
+        # 중앙 위젯 생성
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # 메인 레이아웃 설정
+        layout = QVBoxLayout(central_widget)
+        
+        # 탭 위젯 생성
+        self.tabs = QTabWidget()
+        layout.addWidget(self.tabs)
+        
+        # 각 탭 생성
+        self.create_control_tab()
+        self.create_settings_tab()
+        self.create_monitoring_tab()
+        self.create_log_tab()
+        
+        # 상태 표시줄 생성
+        self.statusBar().showMessage('준비')
+        
+    def create_control_tab(self):
+        """제어 탭 생성"""
+        control_tab = QWidget()
+        layout = QVBoxLayout(control_tab)
+        
+        # 제어 버튼 그룹
+        control_group = QGroupBox('시스템 제어')
+        control_layout = QHBoxLayout()
+        
+        # 시작 버튼
+        self.start_button = QPushButton('시작')
+        self.start_button.setStyleSheet('background-color: #4CAF50; color: white;')
+        control_layout.addWidget(self.start_button)
+        
+        # 중지 버튼
+        self.stop_button = QPushButton('중지')
+        self.stop_button.setStyleSheet('background-color: #f44336; color: white;')
+        control_layout.addWidget(self.stop_button)
+        
+        # 일시정지 버튼
+        self.pause_button = QPushButton('일시정지')
+        self.pause_button.setStyleSheet('background-color: #FFC107; color: black;')
+        control_layout.addWidget(self.pause_button)
+        
+        control_group.setLayout(control_layout)
+        layout.addWidget(control_group)
+        
+        # 상태 표시 그룹
+        status_group = QGroupBox('시스템 상태')
+        status_layout = QVBoxLayout()
+        
+        # 상태 레이블
+        self.status_label = QLabel('대기 중')
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setFont(QFont('Arial', 14, QFont.Bold))
+        status_layout.addWidget(self.status_label)
+        
+        # 진행률 표시
+        self.progress_label = QLabel('0%')
+        self.progress_label.setAlignment(Qt.AlignCenter)
+        status_layout.addWidget(self.progress_label)
+        
+        status_group.setLayout(status_layout)
+        layout.addWidget(status_group)
+        
+        # 탭에 추가
+        self.tabs.addTab(control_tab, '제어')
+        
+    def create_settings_tab(self):
+        """설정 탭 생성"""
+        settings_tab = QWidget()
+        layout = QVBoxLayout(settings_tab)
+        
+        # 최적화 설정 그룹
+        optimization_group = QGroupBox('최적화 설정')
+        optimization_layout = QVBoxLayout()
+        
+        # 알고리즘 선택
+        algorithm_layout = QHBoxLayout()
+        algorithm_layout.addWidget(QLabel('알고리즘:'))
+        self.algorithm_combo = QComboBox()
+        self.algorithm_combo.addItems(['탐욕 알고리즘', '유전 알고리즘', '시뮬레이티드 어닐링'])
+        algorithm_layout.addWidget(self.algorithm_combo)
+        optimization_layout.addLayout(algorithm_layout)
+        
+        # 반복 횟수 설정
+        iterations_layout = QHBoxLayout()
+        iterations_layout.addWidget(QLabel('반복 횟수:'))
+        self.iterations_spin = QSpinBox()
+        self.iterations_spin.setRange(1, 1000)
+        self.iterations_spin.setValue(100)
+        iterations_layout.addWidget(self.iterations_spin)
+        optimization_layout.addLayout(iterations_layout)
+        
+        # 시간 제한 설정
+        time_limit_layout = QHBoxLayout()
+        time_limit_layout.addWidget(QLabel('시간 제한(초):'))
+        self.time_limit_spin = QSpinBox()
+        self.time_limit_spin.setRange(1, 3600)
+        self.time_limit_spin.setValue(300)
+        time_limit_layout.addWidget(self.time_limit_spin)
+        optimization_layout.addLayout(time_limit_layout)
+        
+        optimization_group.setLayout(optimization_layout)
+        layout.addWidget(optimization_group)
+        
+        # 제약 조건 설정 그룹
+        constraints_group = QGroupBox('제약 조건')
+        constraints_layout = QVBoxLayout()
+        
+        # 시간 제약 활성화
+        self.time_constraint_check = QCheckBox('시간 제약 사용')
+        self.time_constraint_check.setChecked(True)
+        constraints_layout.addWidget(self.time_constraint_check)
+        
+        # 용량 제약 활성화
+        self.capacity_constraint_check = QCheckBox('용량 제약 사용')
+        self.capacity_constraint_check.setChecked(True)
+        constraints_layout.addWidget(self.capacity_constraint_check)
+        
+        # 우선순위 활성화
+        self.priority_check = QCheckBox('우선순위 사용')
+        self.priority_check.setChecked(True)
+        constraints_layout.addWidget(self.priority_check)
+        
+        constraints_group.setLayout(constraints_layout)
+        layout.addWidget(constraints_group)
+        
+        # 설정 저장 버튼
+        self.save_settings_button = QPushButton('설정 저장')
+        layout.addWidget(self.save_settings_button)
+        
+        # 탭에 추가
+        self.tabs.addTab(settings_tab, '설정')
+        
+    def create_monitoring_tab(self):
+        """모니터링 탭 생성"""
+        monitoring_tab = QWidget()
+        layout = QVBoxLayout(monitoring_tab)
+        
+        # 성능 지표 그룹
+        metrics_group = QGroupBox('성능 지표')
+        metrics_layout = QVBoxLayout()
+        
+        # 현재 비용
+        cost_layout = QHBoxLayout()
+        cost_layout.addWidget(QLabel('현재 비용:'))
+        self.cost_label = QLabel('0')
+        cost_layout.addWidget(self.cost_label)
+        metrics_layout.addLayout(cost_layout)
+        
+        # 현재 거리
+        distance_layout = QHBoxLayout()
+        distance_layout.addWidget(QLabel('현재 거리:'))
+        self.distance_label = QLabel('0')
+        distance_layout.addWidget(self.distance_label)
+        metrics_layout.addLayout(distance_layout)
+        
+        # 현재 시간
+        time_layout = QHBoxLayout()
+        time_layout.addWidget(QLabel('현재 시간:'))
+        self.time_label = QLabel('0')
+        time_layout.addWidget(self.time_label)
+        metrics_layout.addLayout(time_layout)
+        
+        metrics_group.setLayout(metrics_layout)
+        layout.addWidget(metrics_group)
+        
+        # 그래프 표시 영역
+        self.graph_label = QLabel('그래프가 여기에 표시됩니다.')
+        self.graph_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.graph_label)
+        
+        # 탭에 추가
+        self.tabs.addTab(monitoring_tab, '모니터링')
+        
+    def create_log_tab(self):
+        """로그 탭 생성"""
+        log_tab = QWidget()
+        layout = QVBoxLayout(log_tab)
+        
+        # 로그 표시 영역
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        layout.addWidget(self.log_text)
+        
+        # 로그 제어 버튼
+        log_control_layout = QHBoxLayout()
+        
+        # 로그 저장 버튼
+        self.save_log_button = QPushButton('로그 저장')
+        log_control_layout.addWidget(self.save_log_button)
+        
+        # 로그 지우기 버튼
+        self.clear_log_button = QPushButton('로그 지우기')
+        log_control_layout.addWidget(self.clear_log_button)
+        
+        layout.addLayout(log_control_layout)
+        
+        # 탭에 추가
+        self.tabs.addTab(log_tab, '로그')
+        
+    def setup_connections(self):
+        """이벤트 핸들러 연결"""
+        # 제어 버튼
+        self.start_button.clicked.connect(self.start_system)
+        self.stop_button.clicked.connect(self.stop_system)
+        self.pause_button.clicked.connect(self.pause_system)
+        
+        # 설정 버튼
+        self.save_settings_button.clicked.connect(self.save_settings)
+        
+        # 로그 버튼
+        self.save_log_button.clicked.connect(self.save_log)
+        self.clear_log_button.clicked.connect(self.clear_log)
+        
+    def setup_timer(self):
+        """타이머 설정"""
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_status)
+        self.update_timer.start(1000)  # 1초마다 업데이트
+        
+    def start_system(self):
+        """시스템 시작"""
+        try:
+            self.status_label.setText('실행 중')
+            self.status_label.setStyleSheet('color: #4CAF50;')
+            self.log_message('시스템이 시작되었습니다.')
+            logger.info("시스템 시작")
+            
+        except Exception as e:
+            self.log_message(f'시스템 시작 중 오류 발생: {str(e)}')
+            logger.error(f"시스템 시작 중 오류 발생: {str(e)}")
+            
+    def stop_system(self):
+        """시스템 중지"""
+        try:
+            self.status_label.setText('중지됨')
+            self.status_label.setStyleSheet('color: #f44336;')
+            self.log_message('시스템이 중지되었습니다.')
+            logger.info("시스템 중지")
+            
+        except Exception as e:
+            self.log_message(f'시스템 중지 중 오류 발생: {str(e)}')
+            logger.error(f"시스템 중지 중 오류 발생: {str(e)}")
+            
+    def pause_system(self):
+        """시스템 일시정지"""
+        try:
+            if self.status_label.text() == '일시정지':
+                self.status_label.setText('실행 중')
+                self.status_label.setStyleSheet('color: #4CAF50;')
+                self.log_message('시스템이 재개되었습니다.')
+                logger.info("시스템 재개")
+            else:
+                self.status_label.setText('일시정지')
+                self.status_label.setStyleSheet('color: #FFC107;')
+                self.log_message('시스템이 일시정지되었습니다.')
+                logger.info("시스템 일시정지")
+                
+        except Exception as e:
+            self.log_message(f'시스템 일시정지 중 오류 발생: {str(e)}')
+            logger.error(f"시스템 일시정지 중 오류 발생: {str(e)}")
+            
+    def save_settings(self):
+        """설정 저장"""
+        try:
+            # 설정 데이터 수집
+            settings = {
+                'algorithm': self.algorithm_combo.currentText(),
+                'iterations': self.iterations_spin.value(),
+                'time_limit': self.time_limit_spin.value(),
+                'time_constraint': self.time_constraint_check.isChecked(),
+                'capacity_constraint': self.capacity_constraint_check.isChecked(),
+                'priority': self.priority_check.isChecked()
+            }
+            
+            # 설정 저장 로직 구현
+            self.log_message('설정이 저장되었습니다.')
+            logger.info(f"설정 저장 완료: {settings}")
+            
+        except Exception as e:
+            self.log_message(f'설정 저장 중 오류 발생: {str(e)}')
+            logger.error(f"설정 저장 중 오류 발생: {str(e)}")
+            
+    def save_log(self):
+        """로그 저장"""
+        try:
+            # 파일 저장 대화상자 표시
+            file_name, _ = QFileDialog.getSaveFileName(
+                self,
+                "로그 저장",
+                "",
+                "텍스트 파일 (*.txt);;모든 파일 (*.*)"
+            )
+            
+            if file_name:
+                # 로그 내용 저장
+                with open(file_name, 'w', encoding='utf-8') as f:
+                    f.write(self.log_text.toPlainText())
+                    
+                self.log_message(f'로그가 저장되었습니다: {file_name}')
+                logger.info(f"로그 저장 완료: {file_name}")
+                
+        except Exception as e:
+            self.log_message(f'로그 저장 중 오류 발생: {str(e)}')
+            logger.error(f"로그 저장 중 오류 발생: {str(e)}")
+            
+    def clear_log(self):
+        """로그 지우기"""
+        self.log_text.clear()
+        self.log_message('로그가 지워졌습니다.')
+        logger.info("로그 초기화")
+        
+    def log_message(self, message: str):
+        """
+        로그 메시지 추가
+        
+        Args:
+            message (str): 로그 메시지
+        """
+        timestamp = QDateTime.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')
+        self.log_text.append(f'[{timestamp}] {message}')
+        
+    def update_status(self):
+        """상태 업데이트"""
+        # 상태 업데이트 로직 구현
+        pass
+        
+    def closeEvent(self, event):
+        """
+        프로그램 종료 시 처리
+        
+        Args:
+            event: 종료 이벤트
+        """
+        reply = QMessageBox.question(
+            self,
+            '종료 확인',
+            '프로그램을 종료하시겠습니까?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            event.accept()
+            logger.info("프로그램 종료")
+        else:
+            event.ignore()
+            
+def main():
+    """메인 함수"""
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
             

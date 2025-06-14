@@ -2,6 +2,207 @@
 import customtkinter as ctk
 import pandas as pd
 from tkinter import messagebox
+import sys
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                           QHBoxLayout, QPushButton, QLabel, QFileDialog,
+                           QTableWidget, QTableWidgetItem, QMessageBox)
+from PyQt5.QtCore import Qt
+import logging
+
+# 로거 설정
+logger = logging.getLogger(__name__)
+
+class DataManagerGUI(QMainWindow):
+    """
+    데이터 관리 GUI 클래스
+    
+    이 클래스는 데이터 관리 기능을 위한 그래픽 사용자 인터페이스를 제공합니다.
+    데이터 로드, 저장, 편집 등의 기능을 포함합니다.
+    """
+    
+    def __init__(self):
+        """DataManagerGUI 초기화"""
+        super().__init__()
+        self.init_ui()
+        self.data = None
+        self.current_file = None
+        
+    def init_ui(self):
+        """사용자 인터페이스 초기화"""
+        # 메인 윈도우 설정
+        self.setWindowTitle('데이터 관리 시스템')
+        self.setGeometry(100, 100, 800, 600)
+        
+        # 중앙 위젯 생성
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # 메인 레이아웃 설정
+        layout = QVBoxLayout(central_widget)
+        
+        # 버튼 레이아웃 생성
+        button_layout = QHBoxLayout()
+        
+        # 데이터 로드 버튼
+        self.load_button = QPushButton('데이터 로드')
+        self.load_button.clicked.connect(self.load_data)
+        button_layout.addWidget(self.load_button)
+        
+        # 데이터 저장 버튼
+        self.save_button = QPushButton('데이터 저장')
+        self.save_button.clicked.connect(self.save_data)
+        button_layout.addWidget(self.save_button)
+        
+        # 데이터 편집 버튼
+        self.edit_button = QPushButton('데이터 편집')
+        self.edit_button.clicked.connect(self.edit_data)
+        button_layout.addWidget(self.edit_button)
+        
+        # 버튼 레이아웃을 메인 레이아웃에 추가
+        layout.addLayout(button_layout)
+        
+        # 데이터 테이블 생성
+        self.table = QTableWidget()
+        layout.addWidget(self.table)
+        
+        # 상태 표시줄 생성
+        self.statusBar().showMessage('준비')
+        
+    def load_data(self):
+        """데이터 파일 로드"""
+        try:
+            # 파일 선택 대화상자 표시
+            file_name, _ = QFileDialog.getOpenFileName(
+                self,
+                "데이터 파일 선택",
+                "",
+                "CSV 파일 (*.csv);;Excel 파일 (*.xlsx *.xls);;모든 파일 (*.*)"
+            )
+            
+            if file_name:
+                # 파일 확장자에 따라 데이터 로드
+                if file_name.endswith('.csv'):
+                    self.data = pd.read_csv(file_name)
+                elif file_name.endswith(('.xlsx', '.xls')):
+                    self.data = pd.read_excel(file_name)
+                else:
+                    QMessageBox.warning(self, '경고', '지원하지 않는 파일 형식입니다.')
+                    return
+                    
+                # 테이블 업데이트
+                self.update_table()
+                self.current_file = file_name
+                self.statusBar().showMessage(f'파일 로드됨: {file_name}')
+                logger.info(f"데이터 파일 로드 완료: {file_name}")
+                
+        except Exception as e:
+            QMessageBox.critical(self, '오류', f'데이터 로드 중 오류 발생: {str(e)}')
+            logger.error(f"데이터 로드 중 오류 발생: {str(e)}")
+            
+    def save_data(self):
+        """데이터 파일 저장"""
+        try:
+            if self.data is None:
+                QMessageBox.warning(self, '경고', '저장할 데이터가 없습니다.')
+                return
+                
+            # 파일 저장 대화상자 표시
+            file_name, _ = QFileDialog.getSaveFileName(
+                self,
+                "데이터 저장",
+                "",
+                "CSV 파일 (*.csv);;Excel 파일 (*.xlsx);;모든 파일 (*.*)"
+            )
+            
+            if file_name:
+                # 파일 확장자에 따라 데이터 저장
+                if file_name.endswith('.csv'):
+                    self.data.to_csv(file_name, index=False)
+                elif file_name.endswith('.xlsx'):
+                    self.data.to_excel(file_name, index=False)
+                else:
+                    QMessageBox.warning(self, '경고', '지원하지 않는 파일 형식입니다.')
+                    return
+                    
+                self.current_file = file_name
+                self.statusBar().showMessage(f'파일 저장됨: {file_name}')
+                logger.info(f"데이터 파일 저장 완료: {file_name}")
+                
+        except Exception as e:
+            QMessageBox.critical(self, '오류', f'데이터 저장 중 오류 발생: {str(e)}')
+            logger.error(f"데이터 저장 중 오류 발생: {str(e)}")
+            
+    def edit_data(self):
+        """데이터 편집"""
+        try:
+            if self.data is None:
+                QMessageBox.warning(self, '경고', '편집할 데이터가 없습니다.')
+                return
+                
+            # 편집 모드 활성화
+            self.table.setEditTriggers(QTableWidget.DoubleClicked)
+            self.statusBar().showMessage('편집 모드 활성화')
+            logger.info("데이터 편집 모드 활성화")
+            
+        except Exception as e:
+            QMessageBox.critical(self, '오류', f'데이터 편집 중 오류 발생: {str(e)}')
+            logger.error(f"데이터 편집 중 오류 발생: {str(e)}")
+            
+    def update_table(self):
+        """테이블 위젯 업데이트"""
+        try:
+            if self.data is None:
+                return
+                
+            # 테이블 크기 설정
+            self.table.setRowCount(len(self.data))
+            self.table.setColumnCount(len(self.data.columns))
+            
+            # 컬럼 헤더 설정
+            self.table.setHorizontalHeaderLabels(self.data.columns)
+            
+            # 데이터 채우기
+            for i in range(len(self.data)):
+                for j in range(len(self.data.columns)):
+                    value = str(self.data.iloc[i, j])
+                    item = QTableWidgetItem(value)
+                    self.table.setItem(i, j, item)
+                    
+            # 컬럼 크기 자동 조정
+            self.table.resizeColumnsToContents()
+            logger.info("테이블 업데이트 완료")
+            
+        except Exception as e:
+            QMessageBox.critical(self, '오류', f'테이블 업데이트 중 오류 발생: {str(e)}')
+            logger.error(f"테이블 업데이트 중 오류 발생: {str(e)}")
+            
+    def closeEvent(self, event):
+        """
+        프로그램 종료 시 처리
+        
+        Args:
+            event: 종료 이벤트
+        """
+        reply = QMessageBox.question(
+            self,
+            '종료 확인',
+            '프로그램을 종료하시겠습니까?',
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            event.accept()
+            logger.info("프로그램 종료")
+        else:
+            event.ignore()
+            
+def main():
+    """메인 함수"""
+    app = QApplication(sys.argv)
+    window = DataManagerGUI()
+    window.show()
+    sys.exit(app.exec_())
 
 class DataManagerGUI:
     """데이터 관리 GUI 클래스"""
